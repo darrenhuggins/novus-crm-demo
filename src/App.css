@@ -40,8 +40,14 @@
   color: var(--sidebar-text-active);
 }
 
-.add-new-btn {
+.sidebar-footer {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-new-btn {
   background: var(--accent);
   color: #fff;
   border: none;
@@ -49,6 +55,44 @@
   padding: 10px;
   font-size: 14px;
   font-weight: 600;
+}
+
+.simulate-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sidebar-text);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.identity-card {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.identity-name {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.identity-account {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-bottom: 6px;
+}
+
+.logout-link {
+  background: none;
+  border: none;
+  color: var(--sidebar-text);
+  font-size: 12px;
+  text-decoration: underline;
+  padding: 0;
 }
 
 .main-content {
@@ -293,4 +337,87 @@
 .btn-secondary {
   background: var(--accent-bg);
   color: var(--text);
+}
+
+.login-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sidebar-bg);
+  padding: 24px;
+}
+
+.login-card {
+  width: 380px;
+  max-width: 100%;
+  background: var(--panel-bg);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 24px 24px 20px;
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.login-personas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.persona-chip {
+  text-align: left;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  border: none;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.persona-chip span {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.login-divider {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  opacity: 0.6;
+  text-align: center;
+  margin: 4px 0 14px;
+}
+
+.simulate-link {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.simulator-modal {
+  width: 420px;
+}
+
+.simulator-log {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.simulator-log p {
+  margin: 0;
 }

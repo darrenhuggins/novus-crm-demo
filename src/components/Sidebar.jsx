@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import AddNewModal from './AddNewModal';
+import { useAuth } from '../context/AuthContext';
 
 const links = [
   { to: '/', label: 'Dashboard' },
@@ -15,10 +16,11 @@ const typeForPath = {
   '/opportunities': 'Opportunity',
 };
 
-export default function Sidebar() {
+export default function Sidebar({ onOpenSimulator }) {
   const [modalOpen, setModalOpen] = useState(false);
   const location = useLocation();
   const defaultType = typeForPath[location.pathname] ?? 'Opportunity';
+  const { user, logout } = useAuth();
 
   return (
     <aside className="sidebar">
@@ -35,7 +37,19 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
-      <button className="add-new-btn" onClick={() => setModalOpen(true)}>+ Add New</button>
+
+      <div className="sidebar-footer">
+        <button className="add-new-btn" onClick={() => setModalOpen(true)}>+ Add New</button>
+        <button className="simulate-btn" onClick={onOpenSimulator}>Simulate Activity</button>
+
+        {user && (
+          <div className="identity-card">
+            <div className="identity-name">{user.name}</div>
+            <div className="identity-account">{user.accountName}</div>
+            <button className="logout-link" onClick={logout}>Log out</button>
+          </div>
+        )}
+      </div>
 
       {modalOpen && (
         <AddNewModal initialType={defaultType} onClose={() => setModalOpen(false)} />

@@ -1,6 +1,8 @@
-import { opportunities, forecast } from '../data/mockData';
+import { forecast } from '../data/mockData';
+import { useCrmData } from '../context/CrmDataContext';
 
 export default function Dashboard() {
+  const { opportunities } = useCrmData();
   const openOpps = opportunities.filter((o) => o.stage !== 'Closed Won').slice(0, 8);
   const quotaPct = Math.round((forecast.attained / forecast.quota) * 100);
 

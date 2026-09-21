@@ -1,6 +1,8 @@
-import { opportunities } from '../data/mockData';
+import { useCrmData } from '../context/CrmDataContext';
 
 export default function Opportunities() {
+  const { opportunities } = useCrmData();
+
   return (
     <div className="page">
       <h1>Opportunities</h1>

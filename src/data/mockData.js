@@ -7,20 +7,23 @@ const companies = [
 const firstNames = ['Ava', 'Liam', 'Maya', 'Noah', 'Ivy', 'Ezra', 'Luna', 'Kai'];
 const lastNames = ['Torres', 'Nguyen', 'Patel', 'Okafor', 'Reyes', 'Kim', 'Novak', 'Brooks'];
 
-const stages = ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won'];
+export const stages = ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won'];
+export const industries = ['Manufacturing', 'Retail', 'Healthcare', 'Finance', 'Technology'];
 
 export const accounts = companies.map((name, i) => ({
   id: i + 1,
   name,
-  industry: ['Manufacturing', 'Retail', 'Healthcare', 'Finance', 'Technology'][i % 5],
+  industry: industries[i % industries.length],
   employees: 50 + i * 37,
   arr: 12000 + i * 4300,
 }));
 
+export const contactTitles = ['VP of Sales', 'Procurement Lead', 'Director of Ops', 'CTO', 'Account Owner'];
+
 export const contacts = companies.slice(0, 10).map((company, i) => ({
   id: i + 1,
   name: `${firstNames[i % firstNames.length]} ${lastNames[i % lastNames.length]}`,
-  title: ['VP of Sales', 'Procurement Lead', 'Director of Ops', 'CTO', 'Account Owner'][i % 5],
+  title: contactTitles[i % contactTitles.length],
   account: company,
   email: `${firstNames[i % firstNames.length].toLowerCase()}.${lastNames[i % lastNames.length].toLowerCase()}@example.com`,
 }));

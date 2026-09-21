@@ -1,6 +1,8 @@
-import { accounts } from '../data/mockData';
+import { useCrmData } from '../context/CrmDataContext';
 
 export default function Accounts() {
+  const { accounts } = useCrmData();
+
   return (
     <div className="page">
       <h1>Accounts</h1>

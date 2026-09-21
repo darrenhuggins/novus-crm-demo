@@ -31,6 +31,13 @@ export default function AddNewModal({ initialType, onClose }) {
         employees: Number(form.employees) || 0,
         arr: Number(form.arr) || 0,
       });
+      if (typeof pendo !== 'undefined') {
+        pendo.track('account_created', {
+          industry: form.industry,
+          employees: Number(form.employees) || 0,
+          arr: Number(form.arr) || 0,
+        });
+      }
     } else if (type === 'Contact') {
       addContact({
         name: form.name,
@@ -38,6 +45,12 @@ export default function AddNewModal({ initialType, onClose }) {
         account: form.account,
         email: form.email,
       });
+      if (typeof pendo !== 'undefined') {
+        pendo.track('contact_created', {
+          title: form.title,
+          account: form.account,
+        });
+      }
     } else {
       addOpportunity({
         name: form.name,
@@ -46,6 +59,14 @@ export default function AddNewModal({ initialType, onClose }) {
         amount: Number(form.amount) || 0,
         closeDate: form.closeDate,
       });
+      if (typeof pendo !== 'undefined') {
+        pendo.track('opportunity_created', {
+          stage: form.stage,
+          amount: Number(form.amount) || 0,
+          account: form.account,
+          closeDate: form.closeDate,
+        });
+      }
     }
     onClose();
   };

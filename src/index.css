@@ -1,0 +1,85 @@
+:root {
+  --text: #4a4750;
+  --text-h: #16141c;
+  --bg: #f6f5f8;
+  --panel-bg: #ffffff;
+  --border: #e5e4e7;
+  --accent: #6c3bff;
+  --accent-bg: rgba(108, 59, 255, 0.1);
+  --sidebar-bg: #1c1a24;
+  --sidebar-text: #cbc8d4;
+  --sidebar-text-active: #ffffff;
+  --shadow: rgba(0, 0, 0, 0.06) 0 4px 12px -2px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font: 15px/145% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #c7c5cc;
+    --text-h: #f3f4f6;
+    --bg: #14131a;
+    --panel-bg: #1e1c26;
+    --border: #302e3a;
+    --accent: #a888ff;
+    --accent-bg: rgba(168, 136, 255, 0.15);
+    --sidebar-bg: #0f0e14;
+    --shadow: rgba(0, 0, 0, 0.4) 0 4px 12px -2px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0 0 20px;
+}
+
+h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0 0 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th, td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+th {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}

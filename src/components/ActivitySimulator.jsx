@@ -1,11 +1,9 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useCrmData } from '../context/CrmDataContext';
 import { personas } from '../data/personas';
 import { stages, contactTitles } from '../data/mockData';
 
-/* global pendo */
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const between = (min, max) => wait(min + Math.random() * (max - min));
@@ -24,6 +22,25 @@ async function rageClick(selector, times, gapMs) {
   return true;
 }
 
+// Sets a value the way a real keystroke/selection would, so React's
+// controlled-input tracking actually fires onChange (a plain `el.value =`
+// gets silently swallowed because React patches the DOM setter to track
+// the "real" value already).
+function setReactValue(el, value) {
+  const proto = el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+  el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+}
+
+function getModalField(labelText) {
+  for (const label of document.querySelectorAll('.modal-form label')) {
+    if (label.textContent.trim().startsWith(labelText)) {
+      return label.querySelector('input, select');
+    }
+  }
+  return null;
+}
+
 const MODES = [
   { id: 'happy', label: 'Realistic Session' },
   { id: 'frustrated', label: 'Frustrated Session' },
@@ -32,13 +49,67 @@ const MODES = [
 export default function ActivitySimulator({ open, onClose }) {
   const navigate = useNavigate();
   const { login, logout } = useAuth();
-  const { addContact, addOpportunity } = useCrmData();
   const [mode, setMode] = useState('happy');
   const [log, setLog] = useState([]);
   const [running, setRunning] = useState(false);
   const cursor = useRef(0);
 
   const appendLog = (line) => setLog((prev) => [...prev, line]);
+
+  // Drives the real "+ Add New" button, tab, and form fields — not a
+  // shortcut through context state — so Pendo's feature tagging (which
+  // watches the actual button/tab/field elements, not a custom track
+  // call) attributes this the same way it would a genuine user action.
+  const createRecordViaRealForm = async (type, persona) => {
+    const addBtn = document.querySelector('.add-new-btn');
+    if (!addBtn) {
+      appendLog('Could not find the Add New button — skipped record creation');
+      return;
+    }
+    addBtn.click();
+    await between(500, 900);
+
+    const tabLabel = type === 'contact' ? 'Contact' : 'Opportunity';
+    const tab = [...document.querySelectorAll('.modal-tab')].find((t) => t.textContent.trim() === tabLabel);
+    if (tab) tab.click();
+    await between(300, 500);
+
+    const nameField = getModalField('Name');
+    if (nameField) setReactValue(nameField, type === 'contact' ? `${persona.name} (colleague)` : `${persona.accountName} Expansion`);
+    await between(300, 500);
+
+    const accountField = getModalField('Account');
+    if (accountField) setReactValue(accountField, persona.accountName);
+    await between(300, 500);
+
+    if (type === 'contact') {
+      const titleField = getModalField('Title');
+      if (titleField) setReactValue(titleField, pick(contactTitles));
+      await between(250, 400);
+
+      const emailField = getModalField('Email');
+      if (emailField) setReactValue(emailField, persona.email);
+    } else {
+      const stageField = getModalField('Stage');
+      if (stageField) setReactValue(stageField, pick(stages));
+      await between(250, 400);
+
+      const amountField = getModalField('Amount');
+      if (amountField) setReactValue(amountField, String(5000 + Math.floor(Math.random() * 60000)));
+    }
+    await between(500, 900);
+
+    const submitBtn = document.querySelector('.modal-form button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.click();
+      appendLog(type === 'contact'
+        ? `Filled out and submitted the Add New form for a contact at ${persona.accountName}`
+        : `Filled out and submitted the Add New form for an opportunity at ${persona.accountName}`);
+    } else {
+      appendLog('Could not find the Save button — form was not submitted');
+    }
+    await between(300, 600);
+  };
 
   const runHappySession = async (persona) => {
     login({ ...persona });
@@ -61,24 +132,13 @@ export default function ActivitySimulator({ open, onClose }) {
     appendLog('Viewed Opportunities');
     await between(1500, 3000);
 
-    await between(400, 900);
-    if (Math.random() > 0.5) {
-      const title = pick(contactTitles);
-      addContact({ name: `${persona.name} (colleague)`, title, account: persona.accountName, email: persona.email });
-      if (typeof pendo !== 'undefined') {
-        pendo.track('contact_created', { title, account: persona.accountName, source: 'simulator' });
-      }
-      appendLog(`Created a contact at ${persona.accountName}`);
-    } else {
-      const stage = pick(stages);
-      const amount = 5000 + Math.floor(Math.random() * 60000);
-      addOpportunity({ name: `${persona.accountName} Expansion`, account: persona.accountName, stage, amount, closeDate: '' });
-      if (typeof pendo !== 'undefined') {
-        pendo.track('opportunity_created', { stage, amount, account: persona.accountName, source: 'simulator' });
-      }
-      appendLog(`Created an opportunity for ${persona.accountName}`);
+    const type = Math.random() > 0.5 ? 'contact' : 'opportunity';
+    if (type === 'contact') {
+      navigate('/contacts');
+      appendLog('Navigated back to Contacts to add a new one');
+      await between(800, 1200);
     }
-    await between(1000, 1800);
+    await createRecordViaRealForm(type, persona);
 
     navigate('/');
     appendLog('Returned to Dashboard');
@@ -176,7 +236,7 @@ export default function ActivitySimulator({ open, onClose }) {
 
           <p className="login-subtitle">
             {mode === 'happy'
-              ? 'Simulates a real visitor session with human-paced delays — logs in, browses every page, creates a record, then logs out.'
+              ? 'Simulates a real visitor session with human-paced delays — logs in, browses every page, then creates a record through the real Add New button/tabs/fields so Pendo attributes it correctly, then logs out.'
               : 'Simulates a struggling visitor — real clicks on things that look actionable but aren’t, so Pendo’s dead-click / rage-click detection picks them up, then bounces without completing anything.'}
           </p>
 

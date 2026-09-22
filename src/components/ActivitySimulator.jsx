@@ -8,6 +8,14 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const between = (min, max) => wait(min + Math.random() * (max - min));
 
+function formatDuration(ms) {
+  const totalSec = Math.round(ms / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return sec ? `${min}m ${sec}s` : `${min}m`;
+}
+
 // Dispatches real click events on a DOM node that has no click handler, so
 // Pendo's own dead-click/rage-click detection (which watches raw clicks,
 // not a custom track event) picks them up the same way it would for an
@@ -46,13 +54,23 @@ const MODES = [
   { id: 'frustrated', label: 'Frustrated Session' },
 ];
 
+const PACING = {
+  quick: { label: 'Quick (10–30s between visitors)', range: [10_000, 30_000] },
+  hour: { label: 'Spread over ~1 hour', range: [3 * 60_000, 8 * 60_000] },
+  day: { label: 'Spread over most of a day', range: [20 * 60_000, 60 * 60_000] },
+};
+
 export default function ActivitySimulator({ open, onClose }) {
   const navigate = useNavigate();
   const { login, logout } = useAuth();
   const [mode, setMode] = useState('happy');
   const [log, setLog] = useState([]);
   const [running, setRunning] = useState(false);
+  const [sessionCount, setSessionCount] = useState(10);
+  const [pacing, setPacing] = useState('quick');
+  const [queueStatus, setQueueStatus] = useState(null);
   const cursor = useRef(0);
+  const stopRef = useRef(false);
 
   const appendLog = (line) => setLog((prev) => [...prev, line]);
 
@@ -221,6 +239,41 @@ export default function ActivitySimulator({ open, onClose }) {
     setRunning(false);
   };
 
+  const stopLongRun = () => {
+    stopRef.current = true;
+  };
+
+  const runLongQueue = async () => {
+    setRunning(true);
+    stopRef.current = false;
+    setQueueStatus({ completed: 0, total: sessionCount });
+
+    for (let i = 0; i < sessionCount; i++) {
+      if (stopRef.current) {
+        appendLog(`Long run stopped after ${i} of ${sessionCount} visitors.`);
+        break;
+      }
+
+      await runOneSession(pick(personas));
+      setQueueStatus({ completed: i + 1, total: sessionCount });
+
+      if (stopRef.current) {
+        appendLog(`Long run stopped after ${i + 1} of ${sessionCount} visitors.`);
+        break;
+      }
+
+      if (i < sessionCount - 1) {
+        const [min, max] = PACING[pacing].range;
+        const gapMs = min + Math.random() * (max - min);
+        appendLog(`Pausing ~${formatDuration(gapMs)} before the next visitor…`);
+        await wait(gapMs);
+      }
+    }
+
+    setRunning(false);
+    setQueueStatus(null);
+  };
+
   if (!open) return null;
 
   return (
@@ -259,6 +312,48 @@ export default function ActivitySimulator({ open, onClose }) {
             <button type="button" className="btn-secondary" onClick={runFullTour} disabled={running}>
               Run All {personas.length} Personas
             </button>
+          </div>
+
+          <div className="longrun-panel">
+            <div className="login-divider">or shape traffic over a longer stretch</div>
+
+            <div className="longrun-fields">
+              <label>
+                Visitors
+                <input
+                  type="number"
+                  min="2"
+                  max="200"
+                  value={sessionCount}
+                  onChange={(e) => setSessionCount(Math.max(2, Math.min(200, Number(e.target.value) || 2)))}
+                  disabled={running}
+                />
+              </label>
+              <label>
+                Pacing
+                <select value={pacing} onChange={(e) => setPacing(e.target.value)} disabled={running}>
+                  {Object.entries(PACING).map(([id, p]) => (
+                    <option key={id} value={id}>{p.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>
+              <button type="button" className="btn-primary" onClick={runLongQueue} disabled={running}>
+                Start Long Run
+              </button>
+              <button type="button" className="btn-secondary" onClick={stopLongRun} disabled={!queueStatus}>
+                Stop
+              </button>
+            </div>
+
+            {queueStatus && (
+              <p className="substat" style={{ marginTop: 8 }}>
+                Visitor {queueStatus.completed} of {queueStatus.total} completed. Keep this tab open — a closed
+                or backgrounded tab may delay timers, but the run will pick back up.
+              </p>
+            )}
           </div>
 
           <div className="simulator-log">

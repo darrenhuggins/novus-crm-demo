@@ -3,6 +3,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import AddNewModal from './AddNewModal';
 import { useAuth } from '../context/AuthContext';
 
+/* global __APP_VERSION__ */
+
 const links = [
   { to: '/', label: 'Dashboard' },
   { to: '/accounts', label: 'Accounts' },
@@ -47,6 +49,7 @@ export default function Sidebar({ onOpenSimulator }) {
             <div className="identity-name">{user.name}</div>
             <div className="identity-account">{user.accountName}</div>
             <button className="logout-link" onClick={logout}>Log out</button>
+            <div className="app-version">v{__APP_VERSION__}</div>
           </div>
         )}
       </div>

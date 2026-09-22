@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { personas } from '../data/personas';
-import { stages, contactTitles } from '../data/mockData';
+import { industries, stages, contactTitles } from '../data/mockData';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -69,7 +69,7 @@ export default function ActivitySimulator({ open, onClose }) {
     addBtn.click();
     await between(500, 900);
 
-    const tabLabel = type === 'contact' ? 'Contact' : 'Opportunity';
+    const tabLabel = type === 'contact' ? 'Contact' : type === 'account' ? 'Account' : 'Opportunity';
     const tab = [...document.querySelectorAll('.modal-tab')].find((t) => t.textContent.trim() === tabLabel);
     if (tab) tab.click();
     await between(300, 500);
@@ -82,7 +82,16 @@ export default function ActivitySimulator({ open, onClose }) {
     if (accountField) setReactValue(accountField, persona.accountName);
     await between(300, 500);
 
-    if (type === 'contact') {
+    if (type === 'account') {
+      const industryField = getModalField('Industry');
+      if (industryField) setReactValue(industryField, pick(industries));
+      await between(250, 400);
+      const employeesField = getModalField('Employees');
+      if (employeesField) setReactValue(employeesField, String(50 + Math.floor(Math.random() * 950)));
+      await between(250, 400);
+      const arrField = getModalField('ARR');
+      if (arrField) setReactValue(arrField, String(10000 + Math.floor(Math.random() * 90000)));
+    } else if (type === 'contact') {
       const titleField = getModalField('Title');
       if (titleField) setReactValue(titleField, pick(contactTitles));
       await between(250, 400);
@@ -102,9 +111,7 @@ export default function ActivitySimulator({ open, onClose }) {
     const submitBtn = document.querySelector('.modal-form button[type="submit"]');
     if (submitBtn) {
       submitBtn.click();
-      appendLog(type === 'contact'
-        ? `Filled out and submitted the Add New form for a contact at ${persona.accountName}`
-        : `Filled out and submitted the Add New form for an opportunity at ${persona.accountName}`);
+      appendLog(`Filled out and submitted the Add New form for ${type === 'account' ? 'an account' : type === 'contact' ? 'a contact' : 'an opportunity'} at ${persona.accountName}`);
     } else {
       appendLog('Could not find the Save button — form was not submitted');
     }
@@ -132,8 +139,13 @@ export default function ActivitySimulator({ open, onClose }) {
     appendLog('Viewed Opportunities');
     await between(1500, 3000);
 
-    const type = Math.random() > 0.5 ? 'contact' : 'opportunity';
-    if (type === 'contact') {
+    const r = Math.random();
+    const type = r < 0.33 ? 'account' : r < 0.66 ? 'contact' : 'opportunity';
+    if (type === 'account') {
+      navigate('/accounts');
+      appendLog('Navigated to Accounts to add a new one');
+      await between(800, 1200);
+    } else if (type === 'contact') {
       navigate('/contacts');
       appendLog('Navigated back to Contacts to add a new one');
       await between(800, 1200);

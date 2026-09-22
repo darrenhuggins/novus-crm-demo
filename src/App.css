@@ -166,12 +166,12 @@
 
 .novus-widget {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  top: 14px;
+  right: 36px;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   align-items: flex-end;
-  gap: 12px;
+  gap: 8px;
 }
 
 .novus-launcher {
@@ -179,8 +179,8 @@
   color: #fff;
   border: none;
   border-radius: 999px;
-  padding: 12px 20px;
-  font-size: 14px;
+  padding: 6px 14px;
+  font-size: 12px;
   font-weight: 600;
   box-shadow: var(--shadow);
 }

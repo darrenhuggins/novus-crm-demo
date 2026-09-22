@@ -375,6 +375,8 @@
   flex-direction: column;
   gap: 6px;
   margin-bottom: 14px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 .persona-chip {
@@ -427,4 +429,38 @@
 
 .simulator-log p {
   margin: 0;
+}
+
+.longrun-panel {
+  margin: 14px 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.longrun-fields {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.longrun-fields label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.longrun-fields input,
+.longrun-fields select {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
 }

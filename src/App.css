@@ -166,10 +166,10 @@
 
 .novus-widget {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  top: 28px;
+  right: 36px;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   align-items: flex-end;
   gap: 12px;
 }

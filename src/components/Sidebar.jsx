@@ -26,7 +26,22 @@ export default function Sidebar({ onOpenSimulator }) {
 
   return (
     <aside className="sidebar">
-      <div className="brand">novusCRM</div>
+      <div className="brand">
+        <svg className="brand-flag" viewBox="0 0 48 48" aria-hidden="true">
+          <rect width="48" height="48" rx="10" fill="#e10600" />
+          <g fill="#fff">
+            <rect x="10" y="10" width="7" height="7" />
+            <rect x="24" y="10" width="7" height="7" />
+            <rect x="17" y="17" width="7" height="7" />
+            <rect x="31" y="17" width="7" height="7" />
+            <rect x="10" y="24" width="7" height="7" />
+            <rect x="24" y="24" width="7" height="7" />
+            <rect x="17" y="31" width="7" height="7" />
+            <rect x="31" y="31" width="7" height="7" />
+          </g>
+        </svg>
+        novusCRM
+      </div>
       <nav>
         {links.map((link) => (
           <NavLink

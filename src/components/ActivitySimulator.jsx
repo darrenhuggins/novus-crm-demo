@@ -208,6 +208,17 @@ const NOVUS_QUESTIONS = [
   'What can you help me with?',
 ];
 
+// Rapid-fire follow-ups for a "rage prompt" burst: a visitor who feels
+// unheard and re-prompts instead of waiting, escalating rather than
+// rephrasing calmly.
+const NOVUS_RAGE_FOLLOWUPS = [
+  "That's not what I asked.",
+  'Can you actually answer my question?',
+  "This isn't helping at all.",
+  'Just give me a straight answer.',
+  'Forget it, never mind.',
+];
+
 export default function ActivitySimulator({ open, onClose }) {
   const { login, logout } = useAuth();
   const { showError } = useErrorBanner();
@@ -300,31 +311,40 @@ export default function ActivitySimulator({ open, onClose }) {
     const failure = triggerRandomError(showError, 0.06);
     if (failure) appendLog(`⚠️ ${failure}`);
     await between(1500, 3000);
+    await maybeAskNovus(0.15, 0.2);
   };
 
   // Drives the real "Ask Novus" launcher, input, send button, and
   // reaction buttons -- same philosophy as createRecordViaRealForm --
   // so Pendo Agent Analytics gets genuine prompt/agent_response/
   // user_reaction events tied to real UI interaction.
-  const chatWithNovus = async () => {
+  //
+  // `rage`: instead of one calm question, fires 2-3 rapid-fire prompts
+  // (barely waiting for a response before re-prompting, escalating in
+  // tone) and finishes with a thumbs-down -- the agent-analytics
+  // equivalent of a rage click.
+  const chatWithNovus = async (rage = false) => {
     const launcher = document.querySelector('.novus-launcher');
     if (!launcher) return false;
     await clickWithCursor(launcher);
     await between(500, 900);
 
-    const input = document.querySelector('.novus-chat-input');
-    if (!input) return false;
-    const question = pick(NOVUS_QUESTIONS);
-    await typeIntoField(input, question);
-    await between(300, 600);
+    const turnCount = rage ? 2 + Math.floor(Math.random() * 2) : 1;
+    for (let turn = 0; turn < turnCount; turn++) {
+      const input = document.querySelector('.novus-chat-input');
+      if (!input) break;
+      const question = turn === 0 ? pick(NOVUS_QUESTIONS) : pick(NOVUS_RAGE_FOLLOWUPS);
+      await typeIntoField(input, question);
+      await between(rage ? 100 : 300, rage ? 300 : 600);
 
-    const sendBtn = document.querySelector('.novus-chat-send');
-    if (sendBtn) await clickWithCursor(sendBtn);
-    appendLog(`Asked Novus: "${question}"`);
-    await between(1400, 2200);
+      const sendBtn = document.querySelector('.novus-chat-send');
+      if (sendBtn) await clickWithCursor(sendBtn);
+      appendLog(rage && turn > 0 ? `Rage-prompted Novus: "${question}"` : `Asked Novus: "${question}"`);
+      await between(rage ? 500 : 1400, rage ? 1000 : 2200);
+    }
 
-    if (Math.random() < 0.7) {
-      const selector = Math.random() < 0.8 ? '.novus-reaction-up' : '.novus-reaction-down';
+    if (rage || Math.random() < 0.7) {
+      const selector = rage ? '.novus-reaction-down' : (Math.random() < 0.8 ? '.novus-reaction-up' : '.novus-reaction-down');
       const buttons = document.querySelectorAll(selector);
       const btn = buttons[buttons.length - 1];
       if (btn) {
@@ -338,6 +358,13 @@ export default function ActivitySimulator({ open, onClose }) {
     if (closeBtn) await clickWithCursor(closeBtn);
     await between(300, 600);
     return true;
+  };
+
+  // Rolls the dice on whether this is a moment to pop open Ask Novus,
+  // and if so, whether it escalates into a rage-prompt burst.
+  const maybeAskNovus = async (chatChance, rageChance) => {
+    if (Math.random() > chatChance) return;
+    await chatWithNovus(Math.random() < rageChance);
   };
 
   const runHappySession = async (persona) => {
@@ -367,10 +394,7 @@ export default function ActivitySimulator({ open, onClose }) {
     await clickNavLink('Dashboard');
     appendLog('Returned to Dashboard');
     await between(800, 1400);
-
-    if (Math.random() < 0.4) {
-      await chatWithNovus();
-    }
+    await maybeAskNovus(0.15, 0.2);
 
     logout();
     appendLog(`Logged out of ${persona.name}'s session`);
@@ -407,6 +431,7 @@ export default function ActivitySimulator({ open, onClose }) {
     if (badgeFailure) appendLog(`⚠️ ${badgeFailure}`);
     await between(3000, 5000);
     appendLog('Paused a while, seemingly unsure what to do next');
+    await maybeAskNovus(0.3, 0.6);
 
     await clickNavLink('Accounts');
     appendLog('Viewed Accounts');
@@ -417,6 +442,7 @@ export default function ActivitySimulator({ open, onClose }) {
     const headingFailure = triggerRandomError(showError, 0.2);
     if (headingFailure) appendLog(`⚠️ ${headingFailure}`);
     await between(700, 1200);
+    await maybeAskNovus(0.25, 0.6);
 
     await clickNavLink('Dashboard');
     appendLog('Bounced back to Dashboard without completing anything');
@@ -506,8 +532,8 @@ export default function ActivitySimulator({ open, onClose }) {
 
           <p className="login-subtitle">
             {mode === 'happy'
-              ? 'Drives the real UI with a visible cursor and real clicks/typing — logs in, browses every page, then creates a record through the actual Add New button/tabs/fields, then logs out. Occasionally hits a simulated error for realistic session replay material.'
-              : 'Simulates a struggling visitor — real cursor movement onto things that look actionable but aren’t, so Pendo’s dead-click / rage-click detection picks them up, occasionally compounded by a simulated error, then bounces without completing anything.'}
+              ? 'Drives the real UI with a visible cursor and real clicks/typing — logs in, browses every page, then creates a record through the actual Add New button/tabs/fields, then logs out. Occasionally hits a simulated error, and occasionally pops open Ask Novus mid-session with a question (rarely escalating into a rage-prompt burst) for realistic session replay and agent-analytics material.'
+              : 'Simulates a struggling visitor — real cursor movement onto things that look actionable but aren’t, so Pendo’s dead-click / rage-click detection picks them up, occasionally compounded by a simulated error or a rage-prompt burst at Ask Novus, then bounces without completing anything.'}
           </p>
 
           <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>

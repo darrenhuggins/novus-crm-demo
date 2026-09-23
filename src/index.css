@@ -88,3 +88,16 @@ button {
   font-family: inherit;
   cursor: pointer;
 }
+
+/* ── Novus / Pendo guide isolation ─────────────────────────────────
+   The :root font shorthand (15px / 145%) is inherited by Pendo's
+   guide layer, making the Release Notes badge pill appear oversized
+   and producing an inherited line-height (~21.75 px) that causes
+   panel content to overflow its scrollable container.
+   Reset both properties on #pendo-base so guides render at the
+   sizes their CSS was designed for, independent of the app's
+   custom typography.                                               */
+#pendo-base {
+  font-size: 14px;
+  line-height: 1.5;
+}

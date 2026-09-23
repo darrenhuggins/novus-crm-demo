@@ -200,6 +200,14 @@ const PACING = {
   day: { label: 'Spread over most of a day', range: [20 * 60_000, 60 * 60_000] },
 };
 
+const NOVUS_QUESTIONS = [
+  "How's my pipeline looking?",
+  'Any accounts I should focus on?',
+  "What's my forecast attainment?",
+  'Any contacts I should follow up with?',
+  'What can you help me with?',
+];
+
 export default function ActivitySimulator({ open, onClose }) {
   const { login, logout } = useAuth();
   const { showError } = useErrorBanner();
@@ -294,6 +302,44 @@ export default function ActivitySimulator({ open, onClose }) {
     await between(1500, 3000);
   };
 
+  // Drives the real "Ask Novus" launcher, input, send button, and
+  // reaction buttons -- same philosophy as createRecordViaRealForm --
+  // so Pendo Agent Analytics gets genuine prompt/agent_response/
+  // user_reaction events tied to real UI interaction.
+  const chatWithNovus = async () => {
+    const launcher = document.querySelector('.novus-launcher');
+    if (!launcher) return false;
+    await clickWithCursor(launcher);
+    await between(500, 900);
+
+    const input = document.querySelector('.novus-chat-input');
+    if (!input) return false;
+    const question = pick(NOVUS_QUESTIONS);
+    await typeIntoField(input, question);
+    await between(300, 600);
+
+    const sendBtn = document.querySelector('.novus-chat-send');
+    if (sendBtn) await clickWithCursor(sendBtn);
+    appendLog(`Asked Novus: "${question}"`);
+    await between(1400, 2200);
+
+    if (Math.random() < 0.7) {
+      const selector = Math.random() < 0.8 ? '.novus-reaction-up' : '.novus-reaction-down';
+      const buttons = document.querySelectorAll(selector);
+      const btn = buttons[buttons.length - 1];
+      if (btn) {
+        await clickWithCursor(btn);
+        appendLog(selector === '.novus-reaction-up' ? "Reacted 👍 to Novus's answer" : "Reacted 👎 to Novus's answer");
+      }
+      await between(300, 600);
+    }
+
+    const closeBtn = document.querySelector('.novus-launcher');
+    if (closeBtn) await clickWithCursor(closeBtn);
+    await between(300, 600);
+    return true;
+  };
+
   const runHappySession = async (persona) => {
     login({ ...persona });
     appendLog(`Logged in as ${persona.name} (${persona.accountName})`);
@@ -321,6 +367,10 @@ export default function ActivitySimulator({ open, onClose }) {
     await clickNavLink('Dashboard');
     appendLog('Returned to Dashboard');
     await between(800, 1400);
+
+    if (Math.random() < 0.4) {
+      await chatWithNovus();
+    }
 
     logout();
     appendLog(`Logged out of ${persona.name}'s session`);

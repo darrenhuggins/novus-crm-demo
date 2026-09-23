@@ -4,7 +4,6 @@ import { useCrmData } from './CrmDataContext';
 /* global pendo */
 const AuthContext = createContext(null);
 const AUTH_KEY = 'novuscrm_auth_user';
-const ANON_VISITOR_KEY = 'novuscrm_visitor_id';
 
 function slugify(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -54,12 +53,13 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem(AUTH_KEY);
     setUser(null);
-
-    const anonId = crypto.randomUUID();
-    localStorage.setItem(ANON_VISITOR_KEY, anonId);
-    if (typeof pendo !== 'undefined') {
-      pendo.identify({ visitor: { id: anonId } });
-    }
+    // Deliberately not re-identifying to a fresh anonymous visitor here:
+    // doing that on every logout minted a brand-new random visitor id with
+    // no full_name/email, which Pendo could only display as a raw UUID,
+    // while still inheriting the outgoing account (since that identify
+    // call didn't set one either). The next login() call re-identifies
+    // properly moments later; nothing meaningful happens on the login
+    // screen in between.
   };
 
   return (

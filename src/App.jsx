@@ -4,12 +4,14 @@ import Sidebar from './components/Sidebar';
 import NovusWidget from './components/NovusWidget';
 import LoginGate from './components/LoginGate';
 import ActivitySimulator from './components/ActivitySimulator';
+import ErrorBanner from './components/ErrorBanner';
 import Dashboard from './pages/Dashboard';
 import Accounts from './pages/Accounts';
 import Contacts from './pages/Contacts';
 import Opportunities from './pages/Opportunities';
 import { CrmDataProvider } from './context/CrmDataContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ErrorBannerProvider } from './context/ErrorBannerContext';
 import './App.css';
 
 function AppContent() {
@@ -35,6 +37,7 @@ function AppContent() {
         <LoginGate onRunSimulator={() => setSimulatorOpen(true)} />
       )}
       <ActivitySimulator open={simulatorOpen} onClose={() => setSimulatorOpen(false)} />
+      <ErrorBanner />
     </>
   );
 }
@@ -43,7 +46,9 @@ function App() {
   return (
     <CrmDataProvider>
       <AuthProvider>
-        <AppContent />
+        <ErrorBannerProvider>
+          <AppContent />
+        </ErrorBannerProvider>
       </AuthProvider>
     </CrmDataProvider>
   );

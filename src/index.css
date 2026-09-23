@@ -4,14 +4,19 @@
   --bg: #f6f5f8;
   --panel-bg: #ffffff;
   --border: #e5e4e7;
-  --accent: #6c3bff;
-  --accent-bg: rgba(108, 59, 255, 0.1);
-  --sidebar-bg: #1c1a24;
-  --sidebar-text: #cbc8d4;
+  --accent: #e10600;
+  --accent-bg: rgba(225, 6, 0, 0.08);
+  --sidebar-bg: #0a0a0a;
+  --sidebar-text: #b7b5bd;
   --sidebar-text-active: #ffffff;
   --shadow: rgba(0, 0, 0, 0.06) 0 4px 12px -2px;
+  --checkers: repeating-linear-gradient(
+    45deg,
+    #000 0 10px,
+    #fff 10px 20px
+  );
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: 'Titillium Web', system-ui, 'Segoe UI', Roboto, sans-serif;
 
   font: 15px/145% var(--sans);
   color-scheme: light dark;
@@ -30,9 +35,9 @@
     --bg: #14131a;
     --panel-bg: #1e1c26;
     --border: #302e3a;
-    --accent: #a888ff;
-    --accent-bg: rgba(168, 136, 255, 0.15);
-    --sidebar-bg: #0f0e14;
+    --accent: #ff3b30;
+    --accent-bg: rgba(255, 59, 48, 0.15);
+    --sidebar-bg: #000000;
     --shadow: rgba(0, 0, 0, 0.4) 0 4px 12px -2px;
   }
 }

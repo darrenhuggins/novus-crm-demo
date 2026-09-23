@@ -21,7 +21,22 @@ export default function LoginGate({ onRunSimulator }) {
   return (
     <div className="login-gate">
       <div className="login-card">
-        <div className="brand" style={{ marginBottom: 8 }}>novusCRM</div>
+        <div className="brand brand-on-light" style={{ marginBottom: 8 }}>
+          <svg className="brand-flag" viewBox="0 0 48 48" aria-hidden="true">
+            <rect width="48" height="48" rx="10" fill="#e10600" />
+            <g fill="#fff">
+              <rect x="10" y="10" width="7" height="7" />
+              <rect x="24" y="10" width="7" height="7" />
+              <rect x="17" y="17" width="7" height="7" />
+              <rect x="31" y="17" width="7" height="7" />
+              <rect x="10" y="24" width="7" height="7" />
+              <rect x="24" y="24" width="7" height="7" />
+              <rect x="17" y="31" width="7" height="7" />
+              <rect x="31" y="31" width="7" height="7" />
+            </g>
+          </svg>
+          novusCRM
+        </div>
         <p className="login-subtitle">Log in to identify this session with Pendo/Novus.</p>
 
         <div className="login-personas">

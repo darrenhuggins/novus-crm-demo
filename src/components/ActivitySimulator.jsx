@@ -1,12 +1,53 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useErrorBanner } from '../context/ErrorBannerContext';
 import { personas } from '../data/personas';
 import { industries, stages, contactTitles } from '../data/mockData';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const between = (min, max) => wait(min + Math.random() * (max - min));
+
+// A grab-bag of failure modes real apps actually produce, so simulated
+// sessions occasionally hit an error the way a genuine user would — good
+// material for session replay and error-monitoring demos. `logConsole`
+// throws-and-catches a real Error so a proper stack trace lands in the
+// console, without actually crashing anything.
+const ERROR_TYPES = [
+  {
+    banner: 'Something went wrong — the account could not be created.',
+    logConsole: () => new Error('POST /api/accounts failed: constraint violation on accounts.id'),
+  },
+  {
+    banner: 'Database write failed. Your changes may not be saved.',
+    logConsole: () => new Error('DatabaseError: write failed — connection pool exhausted'),
+  },
+  {
+    banner: 'Server error (500) — request could not be completed.',
+    logConsole: () => new Error('Internal Server Error: POST /api/records 500'),
+  },
+  {
+    banner: 'Not Found (404) — the requested resource is unavailable.',
+    logConsole: () => new Error('Not Found: GET /api/accounts/undefined 404'),
+  },
+  {
+    banner: 'An unexpected error occurred. Please try again.',
+    logConsole: () => new RangeError('Maximum call stack size exceeded'),
+  },
+  {
+    banner: 'Request timed out. Please check your connection.',
+    logConsole: () => new Error('TimeoutError: request exceeded 30000ms'),
+  },
+];
+
+function triggerRandomError(showError, chance) {
+  if (Math.random() > chance) return false;
+  const errorType = pick(ERROR_TYPES);
+  showError(errorType.banner);
+  console.error(errorType.logConsole());
+  return errorType.banner;
+}
 
 function formatDuration(ms) {
   const totalSec = Math.round(ms / 1000);
@@ -63,6 +104,7 @@ const PACING = {
 export default function ActivitySimulator({ open, onClose }) {
   const navigate = useNavigate();
   const { login, logout } = useAuth();
+  const { showError } = useErrorBanner();
   const [mode, setMode] = useState('happy');
   const [log, setLog] = useState([]);
   const [running, setRunning] = useState(false);
@@ -126,6 +168,16 @@ export default function ActivitySimulator({ open, onClose }) {
     }
     await between(500, 900);
 
+    const failure = triggerRandomError(showError, 0.15);
+    if (failure) {
+      appendLog(`⚠️ Clicked Save, but hit an error: ${failure}`);
+      await between(800, 1400);
+      const cancelBtn = [...document.querySelectorAll('.modal-form button')].find((b) => b.textContent.trim() === 'Cancel');
+      if (cancelBtn) cancelBtn.click();
+      await between(300, 600);
+      return;
+    }
+
     const submitBtn = document.querySelector('.modal-form button[type="submit"]');
     if (submitBtn) {
       submitBtn.click();
@@ -136,26 +188,23 @@ export default function ActivitySimulator({ open, onClose }) {
     await between(300, 600);
   };
 
+  const viewPage = async (path, label) => {
+    navigate(path);
+    appendLog(`Viewed ${label}`);
+    const failure = triggerRandomError(showError, 0.06);
+    if (failure) appendLog(`⚠️ ${failure}`);
+    await between(1500, 3000);
+  };
+
   const runHappySession = async (persona) => {
     login({ ...persona });
     appendLog(`Logged in as ${persona.name} (${persona.accountName})`);
     await between(1200, 2000);
 
-    navigate('/');
-    appendLog('Viewed Dashboard');
-    await between(1500, 3000);
-
-    navigate('/accounts');
-    appendLog('Viewed Accounts');
-    await between(1500, 3000);
-
-    navigate('/contacts');
-    appendLog('Viewed Contacts');
-    await between(1500, 3000);
-
-    navigate('/opportunities');
-    appendLog('Viewed Opportunities');
-    await between(1500, 3000);
+    await viewPage('/', 'Dashboard');
+    await viewPage('/accounts', 'Accounts');
+    await viewPage('/contacts', 'Contacts');
+    await viewPage('/opportunities', 'Opportunities');
 
     const r = Math.random();
     const type = r < 0.33 ? 'account' : r < 0.66 ? 'contact' : 'opportunity';
@@ -193,6 +242,8 @@ export default function ActivitySimulator({ open, onClose }) {
 
     const clickedLogo = await rageClick('.brand', 5, 160);
     appendLog(clickedLogo ? 'Rage-clicked the logo expecting it to do something (dead click)' : 'Skipped logo click — not found');
+    const logoFailure = triggerRandomError(showError, 0.2);
+    if (logoFailure) appendLog(`⚠️ ${logoFailure}`);
     await between(600, 1000);
 
     navigate('/opportunities');
@@ -201,6 +252,8 @@ export default function ActivitySimulator({ open, onClose }) {
 
     const clickedBadge = await rageClick('.badge', 4, 200);
     appendLog(clickedBadge ? 'Rage-clicked a stage badge expecting a filter (dead click)' : 'Skipped badge click — not found');
+    const badgeFailure = triggerRandomError(showError, 0.2);
+    if (badgeFailure) appendLog(`⚠️ ${badgeFailure}`);
     await between(3000, 5000);
     appendLog('Paused a while, seemingly unsure what to do next');
 
@@ -210,6 +263,8 @@ export default function ActivitySimulator({ open, onClose }) {
 
     const clickedHeading = await rageClick('.page h1', 3, 220);
     appendLog(clickedHeading ? 'Rage-clicked the page heading, no response (dead click)' : 'Skipped heading click — not found');
+    const headingFailure = triggerRandomError(showError, 0.2);
+    if (headingFailure) appendLog(`⚠️ ${headingFailure}`);
     await between(700, 1200);
 
     navigate('/');
@@ -301,8 +356,8 @@ export default function ActivitySimulator({ open, onClose }) {
 
           <p className="login-subtitle">
             {mode === 'happy'
-              ? 'Simulates a real visitor session with human-paced delays — logs in, browses every page, then creates a record through the real Add New button/tabs/fields so Pendo attributes it correctly, then logs out.'
-              : 'Simulates a struggling visitor — real clicks on things that look actionable but aren’t, so Pendo’s dead-click / rage-click detection picks them up, then bounces without completing anything.'}
+              ? 'Simulates a real visitor session with human-paced delays — logs in, browses every page, then creates a record through the real Add New button/tabs/fields so Pendo attributes it correctly, then logs out. Occasionally hits a simulated error (failed save, 500, 404…) for realistic session replay material.'
+              : 'Simulates a struggling visitor — real clicks on things that look actionable but aren’t, so Pendo’s dead-click / rage-click detection picks them up, occasionally compounded by a simulated error, then bounces without completing anything.'}
           </p>
 
           <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>

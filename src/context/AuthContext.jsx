@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useCrmData } from './CrmDataContext';
 
 /* global pendo */
@@ -18,9 +18,29 @@ function readStoredUser() {
   }
 }
 
+function identifyPendo(authedUser) {
+  if (typeof pendo === 'undefined') return;
+  pendo.identify({
+    visitor: { id: authedUser.visitorId, email: authedUser.email, full_name: authedUser.name, role: authedUser.role },
+    account: { id: authedUser.accountId, name: authedUser.accountName },
+  });
+}
+
 export function AuthProvider({ children }) {
   const { accounts, addAccount } = useCrmData();
   const [user, setUser] = useState(readStoredUser);
+
+  // main.jsx always boots Pendo anonymously before this provider mounts.
+  // If a session was already logged in (restored from localStorage after
+  // a reload), that anonymous initialize() call is the last thing Pendo
+  // heard -- our own UI still shows the right persona, but Pendo reverts
+  // to a random visitor id (confirmed: reloading while logged in flips
+  // pendo.getVisitorId() back to the anonymous UUID) unless we
+  // re-identify here.
+  useEffect(() => {
+    if (user) identifyPendo(user);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const login = ({ name, email, role, accountName, isNewAccount }) => {
     let account = accounts.find((a) => a.name === accountName);
@@ -41,13 +61,7 @@ export function AuthProvider({ children }) {
 
     localStorage.setItem(AUTH_KEY, JSON.stringify(authedUser));
     setUser(authedUser);
-
-    if (typeof pendo !== 'undefined') {
-      pendo.identify({
-        visitor: { id: authedUser.visitorId, email, full_name: name, role },
-        account: { id: authedUser.accountId, name: account.name },
-      });
-    }
+    identifyPendo(authedUser);
   };
 
   const logout = () => {

@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useErrorBanner } from '../context/ErrorBannerContext';
 import { personas } from '../data/personas';
@@ -9,6 +8,139 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const between = (min, max) => wait(min + Math.random() * (max - min));
 
+// --- Simulated cursor -------------------------------------------------
+// A real visible pointer that moves across the screen and dispatches real
+// mousemove/mousedown/mouseup/click events with proper coordinates, so
+// session replay shows natural-looking movement instead of instant,
+// coordinate-less DOM events.
+let cursorPos = { x: -100, y: -100 };
+
+function ensureSimCursor() {
+  let el = document.getElementById('sim-cursor');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sim-cursor';
+    el.className = 'sim-cursor';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function showSimCursor() {
+  ensureSimCursor().style.opacity = '1';
+}
+
+function hideSimCursor() {
+  const el = document.getElementById('sim-cursor');
+  if (el) el.style.opacity = '0';
+}
+
+async function moveCursorTo(x, y) {
+  const el = ensureSimCursor();
+  el.style.opacity = '1';
+  const startX = cursorPos.x < 0 ? x : cursorPos.x;
+  const startY = cursorPos.y < 0 ? y : cursorPos.y;
+  const steps = 16;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const curX = startX + (x - startX) * eased;
+    const curY = startY + (y - startY) * eased;
+    el.style.transform = `translate(${curX}px, ${curY}px)`;
+    document.elementFromPoint(curX, curY)?.dispatchEvent(
+      new MouseEvent('mousemove', { bubbles: true, clientX: curX, clientY: curY })
+    );
+    await wait(10 + Math.random() * 12);
+  }
+  cursorPos = { x, y };
+}
+
+async function clickWithCursor(el) {
+  if (!el) return false;
+  const rect = el.getBoundingClientRect();
+  if (!rect.width && !rect.height) return false;
+  const x = rect.left + rect.width / 2 + (Math.random() - 0.5) * Math.min(6, rect.width / 4);
+  const y = rect.top + rect.height / 2 + (Math.random() - 0.5) * Math.min(6, rect.height / 4);
+  await moveCursorTo(x, y);
+  await wait(60 + Math.random() * 120);
+  el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: x, clientY: y }));
+  await wait(30 + Math.random() * 60);
+  el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: x, clientY: y }));
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+  return true;
+}
+
+// Repeated clicks near the same spot (small jitter each time) for rage
+// clicks, with real cursor movement to get there first.
+async function rageClickCursor(selector, times, gapMs) {
+  const el = document.querySelector(selector);
+  if (!el) return false;
+  const rect = el.getBoundingClientRect();
+  if (!rect.width && !rect.height) return false;
+  const baseX = rect.left + rect.width / 2;
+  const baseY = rect.top + rect.height / 2;
+  await moveCursorTo(baseX, baseY);
+  for (let i = 0; i < times; i++) {
+    const jx = baseX + (Math.random() - 0.5) * 6;
+    const jy = baseY + (Math.random() - 0.5) * 6;
+    el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: jx, clientY: jy }));
+    el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: jx, clientY: jy }));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: jx, clientY: jy }));
+    await wait(gapMs + Math.random() * 80);
+  }
+  return true;
+}
+
+async function clickNavLink(label) {
+  const link = [...document.querySelectorAll('.nav-link')].find((a) => a.textContent.trim() === label);
+  if (!link) return false;
+  return clickWithCursor(link);
+}
+
+// Sets a value the way a real keystroke/selection would, so React's
+// controlled-input tracking actually fires onChange (a plain `el.value =`
+// gets silently swallowed because React patches the DOM setter to track
+// the "real" value already).
+function setReactValue(el, value) {
+  const proto = el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+  el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
+}
+
+// Clicks into a text field, then builds up the value character by
+// character (each partial string is a real "keystroke" event) instead
+// of setting the whole value in one shot, so data entry is watchable.
+async function typeIntoField(el, text) {
+  if (!el) return false;
+  await clickWithCursor(el);
+  el.focus();
+  for (let i = 1; i <= text.length; i++) {
+    setReactValue(el, text.slice(0, i));
+    await wait(35 + Math.random() * 90);
+  }
+  return true;
+}
+
+// Clicks a <select>, pauses as if choosing, then picks the value.
+async function selectWithCursor(el, value) {
+  if (!el) return false;
+  await clickWithCursor(el);
+  await between(200, 400);
+  setReactValue(el, value);
+  await between(150, 300);
+  return true;
+}
+
+function getModalField(labelText) {
+  for (const label of document.querySelectorAll('.modal-form label')) {
+    if (label.textContent.trim().startsWith(labelText)) {
+      return label.querySelector('input, select');
+    }
+  }
+  return null;
+}
+
+// --- Simulated errors ---------------------------------------------------
 // A grab-bag of failure modes real apps actually produce, so simulated
 // sessions occasionally hit an error the way a genuine user would — good
 // material for session replay and error-monitoring demos. `logConsole`
@@ -57,39 +189,6 @@ function formatDuration(ms) {
   return sec ? `${min}m ${sec}s` : `${min}m`;
 }
 
-// Dispatches real click events on a DOM node that has no click handler, so
-// Pendo's own dead-click/rage-click detection (which watches raw clicks,
-// not a custom track event) picks them up the same way it would for an
-// actual frustrated user.
-async function rageClick(selector, times, gapMs) {
-  const el = document.querySelector(selector);
-  if (!el) return false;
-  for (let i = 0; i < times; i++) {
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-    await wait(gapMs + Math.random() * 80);
-  }
-  return true;
-}
-
-// Sets a value the way a real keystroke/selection would, so React's
-// controlled-input tracking actually fires onChange (a plain `el.value =`
-// gets silently swallowed because React patches the DOM setter to track
-// the "real" value already).
-function setReactValue(el, value) {
-  const proto = el.tagName === 'SELECT' ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype;
-  Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
-  el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
-}
-
-function getModalField(labelText) {
-  for (const label of document.querySelectorAll('.modal-form label')) {
-    if (label.textContent.trim().startsWith(labelText)) {
-      return label.querySelector('input, select');
-    }
-  }
-  return null;
-}
-
 const MODES = [
   { id: 'happy', label: 'Realistic Session' },
   { id: 'frustrated', label: 'Frustrated Session' },
@@ -102,7 +201,6 @@ const PACING = {
 };
 
 export default function ActivitySimulator({ open, onClose }) {
-  const navigate = useNavigate();
   const { login, logout } = useAuth();
   const { showError } = useErrorBanner();
   const [mode, setMode] = useState('happy');
@@ -126,45 +224,45 @@ export default function ActivitySimulator({ open, onClose }) {
       appendLog('Could not find the Add New button — skipped record creation');
       return;
     }
-    addBtn.click();
+    await clickWithCursor(addBtn);
     await between(500, 900);
 
     const tabLabel = type === 'contact' ? 'Contact' : type === 'account' ? 'Account' : 'Opportunity';
     const tab = [...document.querySelectorAll('.modal-tab')].find((t) => t.textContent.trim() === tabLabel);
-    if (tab) tab.click();
+    if (tab) await clickWithCursor(tab);
     await between(300, 500);
 
     const nameField = getModalField('Name');
-    if (nameField) setReactValue(nameField, type === 'contact' ? `${persona.name} (colleague)` : `${persona.accountName} Expansion`);
+    if (nameField) await typeIntoField(nameField, type === 'contact' ? `${persona.name} (colleague)` : `${persona.accountName} Expansion`);
     await between(300, 500);
 
     const accountField = getModalField('Account');
-    if (accountField) setReactValue(accountField, persona.accountName);
+    if (accountField) await selectWithCursor(accountField, persona.accountName);
     await between(300, 500);
 
     if (type === 'account') {
       const industryField = getModalField('Industry');
-      if (industryField) setReactValue(industryField, pick(industries));
+      if (industryField) await selectWithCursor(industryField, pick(industries));
       await between(250, 400);
       const employeesField = getModalField('Employees');
-      if (employeesField) setReactValue(employeesField, String(50 + Math.floor(Math.random() * 950)));
+      if (employeesField) await typeIntoField(employeesField, String(50 + Math.floor(Math.random() * 950)));
       await between(250, 400);
       const arrField = getModalField('ARR');
-      if (arrField) setReactValue(arrField, String(10000 + Math.floor(Math.random() * 90000)));
+      if (arrField) await typeIntoField(arrField, String(10000 + Math.floor(Math.random() * 90000)));
     } else if (type === 'contact') {
       const titleField = getModalField('Title');
-      if (titleField) setReactValue(titleField, pick(contactTitles));
+      if (titleField) await selectWithCursor(titleField, pick(contactTitles));
       await between(250, 400);
 
       const emailField = getModalField('Email');
-      if (emailField) setReactValue(emailField, persona.email);
+      if (emailField) await typeIntoField(emailField, persona.email);
     } else {
       const stageField = getModalField('Stage');
-      if (stageField) setReactValue(stageField, pick(stages));
+      if (stageField) await selectWithCursor(stageField, pick(stages));
       await between(250, 400);
 
       const amountField = getModalField('Amount');
-      if (amountField) setReactValue(amountField, String(5000 + Math.floor(Math.random() * 60000)));
+      if (amountField) await typeIntoField(amountField, String(5000 + Math.floor(Math.random() * 60000)));
     }
     await between(500, 900);
 
@@ -173,14 +271,14 @@ export default function ActivitySimulator({ open, onClose }) {
       appendLog(`⚠️ Clicked Save, but hit an error: ${failure}`);
       await between(800, 1400);
       const cancelBtn = [...document.querySelectorAll('.modal-form button')].find((b) => b.textContent.trim() === 'Cancel');
-      if (cancelBtn) cancelBtn.click();
+      if (cancelBtn) await clickWithCursor(cancelBtn);
       await between(300, 600);
       return;
     }
 
     const submitBtn = document.querySelector('.modal-form button[type="submit"]');
     if (submitBtn) {
-      submitBtn.click();
+      await clickWithCursor(submitBtn);
       appendLog(`Filled out and submitted the Add New form for ${type === 'account' ? 'an account' : type === 'contact' ? 'a contact' : 'an opportunity'} at ${persona.accountName}`);
     } else {
       appendLog('Could not find the Save button — form was not submitted');
@@ -188,8 +286,8 @@ export default function ActivitySimulator({ open, onClose }) {
     await between(300, 600);
   };
 
-  const viewPage = async (path, label) => {
-    navigate(path);
+  const viewPage = async (label) => {
+    await clickNavLink(label);
     appendLog(`Viewed ${label}`);
     const failure = triggerRandomError(showError, 0.06);
     if (failure) appendLog(`⚠️ ${failure}`);
@@ -200,31 +298,33 @@ export default function ActivitySimulator({ open, onClose }) {
     login({ ...persona });
     appendLog(`Logged in as ${persona.name} (${persona.accountName})`);
     await between(1200, 2000);
+    showSimCursor();
 
-    await viewPage('/', 'Dashboard');
-    await viewPage('/accounts', 'Accounts');
-    await viewPage('/contacts', 'Contacts');
-    await viewPage('/opportunities', 'Opportunities');
+    await viewPage('Dashboard');
+    await viewPage('Accounts');
+    await viewPage('Contacts');
+    await viewPage('Opportunities');
 
     const r = Math.random();
     const type = r < 0.33 ? 'account' : r < 0.66 ? 'contact' : 'opportunity';
     if (type === 'account') {
-      navigate('/accounts');
+      await clickNavLink('Accounts');
       appendLog('Navigated to Accounts to add a new one');
       await between(800, 1200);
     } else if (type === 'contact') {
-      navigate('/contacts');
+      await clickNavLink('Contacts');
       appendLog('Navigated back to Contacts to add a new one');
       await between(800, 1200);
     }
     await createRecordViaRealForm(type, persona);
 
-    navigate('/');
+    await clickNavLink('Dashboard');
     appendLog('Returned to Dashboard');
     await between(800, 1400);
 
     logout();
     appendLog(`Logged out of ${persona.name}'s session`);
+    hideSimCursor();
     await between(300, 600);
   };
 
@@ -235,44 +335,46 @@ export default function ActivitySimulator({ open, onClose }) {
     login({ ...persona });
     appendLog(`Logged in as ${persona.name} (${persona.accountName})`);
     await between(1000, 1600);
+    showSimCursor();
 
-    navigate('/');
+    await clickNavLink('Dashboard');
     appendLog('Viewed Dashboard');
     await between(800, 1400);
 
-    const clickedLogo = await rageClick('.brand', 5, 160);
+    const clickedLogo = await rageClickCursor('.brand', 5, 160);
     appendLog(clickedLogo ? 'Rage-clicked the logo expecting it to do something (dead click)' : 'Skipped logo click — not found');
     const logoFailure = triggerRandomError(showError, 0.2);
     if (logoFailure) appendLog(`⚠️ ${logoFailure}`);
     await between(600, 1000);
 
-    navigate('/opportunities');
+    await clickNavLink('Opportunities');
     appendLog('Viewed Opportunities');
     await between(1200, 2000);
 
-    const clickedBadge = await rageClick('.badge', 4, 200);
+    const clickedBadge = await rageClickCursor('.badge', 4, 200);
     appendLog(clickedBadge ? 'Rage-clicked a stage badge expecting a filter (dead click)' : 'Skipped badge click — not found');
     const badgeFailure = triggerRandomError(showError, 0.2);
     if (badgeFailure) appendLog(`⚠️ ${badgeFailure}`);
     await between(3000, 5000);
     appendLog('Paused a while, seemingly unsure what to do next');
 
-    navigate('/accounts');
+    await clickNavLink('Accounts');
     appendLog('Viewed Accounts');
     await between(800, 1300);
 
-    const clickedHeading = await rageClick('.page h1', 3, 220);
+    const clickedHeading = await rageClickCursor('.page h1', 3, 220);
     appendLog(clickedHeading ? 'Rage-clicked the page heading, no response (dead click)' : 'Skipped heading click — not found');
     const headingFailure = triggerRandomError(showError, 0.2);
     if (headingFailure) appendLog(`⚠️ ${headingFailure}`);
     await between(700, 1200);
 
-    navigate('/');
+    await clickNavLink('Dashboard');
     appendLog('Bounced back to Dashboard without completing anything');
     await between(500, 900);
 
     logout();
     appendLog(`Logged out of ${persona.name}'s frustrated session`);
+    hideSimCursor();
     await between(300, 600);
   };
 
@@ -329,14 +431,12 @@ export default function ActivitySimulator({ open, onClose }) {
     setQueueStatus(null);
   };
 
-  if (!open) return null;
-
   return (
-    <div className="modal-overlay" onClick={running ? undefined : onClose}>
-      <div className="modal simulator-modal" onClick={(e) => e.stopPropagation()}>
+    <div className={open ? 'simulator-widget' : 'simulator-widget simulator-widget-hidden'}>
+      <div className="simulator-panel">
         <div className="modal-header">
           <h3>Activity Simulator</h3>
-          <button type="button" onClick={onClose} disabled={running} aria-label="Close">×</button>
+          <button type="button" onClick={onClose} aria-label="Close">×</button>
         </div>
 
         <div className="modal-form">
@@ -356,8 +456,8 @@ export default function ActivitySimulator({ open, onClose }) {
 
           <p className="login-subtitle">
             {mode === 'happy'
-              ? 'Simulates a real visitor session with human-paced delays — logs in, browses every page, then creates a record through the real Add New button/tabs/fields so Pendo attributes it correctly, then logs out. Occasionally hits a simulated error (failed save, 500, 404…) for realistic session replay material.'
-              : 'Simulates a struggling visitor — real clicks on things that look actionable but aren’t, so Pendo’s dead-click / rage-click detection picks them up, occasionally compounded by a simulated error, then bounces without completing anything.'}
+              ? 'Drives the real UI with a visible cursor and real clicks/typing — logs in, browses every page, then creates a record through the actual Add New button/tabs/fields, then logs out. Occasionally hits a simulated error for realistic session replay material.'
+              : 'Simulates a struggling visitor — real cursor movement onto things that look actionable but aren’t, so Pendo’s dead-click / rage-click detection picks them up, occasionally compounded by a simulated error, then bounces without completing anything.'}
           </p>
 
           <div className="modal-actions" style={{ justifyContent: 'flex-start' }}>
@@ -365,7 +465,7 @@ export default function ActivitySimulator({ open, onClose }) {
               Run 1 Session
             </button>
             <button type="button" className="btn-secondary" onClick={runFullTour} disabled={running}>
-              Run All {personas.length} Personas
+              Run All {personas.length}
             </button>
           </div>
 
@@ -405,8 +505,8 @@ export default function ActivitySimulator({ open, onClose }) {
 
             {queueStatus && (
               <p className="substat" style={{ marginTop: 8 }}>
-                Visitor {queueStatus.completed} of {queueStatus.total} completed. Keep this tab open — a closed
-                or backgrounded tab may delay timers, but the run will pick back up.
+                Visitor {queueStatus.completed} of {queueStatus.total} completed. You can hide this panel —
+                the run keeps going in the background either way.
               </p>
             )}
           </div>

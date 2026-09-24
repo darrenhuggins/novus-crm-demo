@@ -11,7 +11,7 @@ const emptyForm = {
 };
 
 export default function AddNewModal({ initialType, onClose }) {
-  const { accounts, addAccount, addContact, addOpportunity } = useCrmData();
+  const { accounts, opportunities, addAccount, addContact, addOpportunity } = useCrmData();
   const [type, setType] = useState(initialType);
   const [form, setForm] = useState(emptyForm[initialType]);
 
@@ -52,6 +52,7 @@ export default function AddNewModal({ initialType, onClose }) {
         });
       }
     } else {
+      const opportunityId = opportunities.reduce((max, r) => Math.max(max, r.id), 0) + 1;
       addOpportunity({
         name: form.name,
         account: form.account,
@@ -61,6 +62,7 @@ export default function AddNewModal({ initialType, onClose }) {
       });
       if (typeof pendo !== 'undefined') {
         pendo.track('opportunity_created', {
+          opportunityId,
           stage: form.stage,
           amount: Number(form.amount) || 0,
           account: form.account,

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useCrmData } from './CrmDataContext';
-import { refreshFeatureFlags } from '../featureFlags.js';
+import { refreshFeatureFlagsAfterIdentify } from '../featureFlags.js';
 
 /* global pendo */
 const AuthContext = createContext(null);
@@ -25,10 +25,10 @@ function identifyPendo(authedUser) {
     visitor: { id: authedUser.visitorId, email: authedUser.email, full_name: authedUser.name, role: authedUser.role },
     account: { id: authedUser.accountId, name: authedUser.accountName },
   });
-  // pendo.identify() updates window.pendo.segmentFlags synchronously, but
-  // nothing tells OpenFeature to re-evaluate without this -- see
-  // featureFlags.js for why.
-  refreshFeatureFlags();
+  // See featureFlags.js: window.pendo.segmentFlags updates asynchronously
+  // after identify(), and nothing tells OpenFeature to re-evaluate on its
+  // own with this Pendo agent build.
+  refreshFeatureFlagsAfterIdentify();
 }
 
 export function AuthProvider({ children }) {

@@ -22,6 +22,11 @@ pendo.initialize({
   visitor: {
     id: getOrCreateVisitorId(),
   },
+  // Required by @pendo/openfeature-web-provider: without this, Pendo never
+  // fires `segmentFlagsUpdated` on pendo.identify(), so feature flags (e.g.
+  // helpButtonEnabled) only ever reflect the account active at page load,
+  // not whoever's logged in now -- stuck until the next full refresh.
+  requestSegmentFlags: true,
 })
 
 OpenFeature.setProviderAndWait(new PendoProvider())

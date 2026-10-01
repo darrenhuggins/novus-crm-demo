@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { OpenFeature } from '@openfeature/web-sdk';
 import { useCrmData } from './CrmDataContext';
 
 /* global pendo */
@@ -27,19 +26,6 @@ function identifyPendo(authedUser) {
   });
 }
 
-// pendo.identify() updates Pendo's own visitor/account state, but it doesn't
-// tell OpenFeature anything -- flag hooks only re-evaluate on an OpenFeature
-// context change event. Without this, a flag gated on account id (like
-// helpButtonEnabled) keeps showing whatever account was active at the last
-// evaluation until something forces a fresh one, e.g. a page refresh.
-function setFeatureContext(authedUser) {
-  OpenFeature.setContext(
-    authedUser
-      ? { targetingKey: authedUser.accountId, accountId: authedUser.accountId }
-      : {}
-  );
-}
-
 export function AuthProvider({ children }) {
   const { accounts, addAccount } = useCrmData();
   const [user, setUser] = useState(readStoredUser);
@@ -52,10 +38,7 @@ export function AuthProvider({ children }) {
   // pendo.getVisitorId() back to the anonymous UUID) unless we
   // re-identify here.
   useEffect(() => {
-    if (user) {
-      identifyPendo(user);
-      setFeatureContext(user);
-    }
+    if (user) identifyPendo(user);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -79,7 +62,6 @@ export function AuthProvider({ children }) {
     localStorage.setItem(AUTH_KEY, JSON.stringify(authedUser));
     setUser(authedUser);
     identifyPendo(authedUser);
-    setFeatureContext(authedUser);
   };
 
   const logout = () => {
@@ -92,13 +74,6 @@ export function AuthProvider({ children }) {
     // call didn't set one either). The next login() call re-identifies
     // properly moments later; nothing meaningful happens on the login
     // screen in between.
-    //
-    // The OpenFeature context is a separate thing from Pendo identify, and
-    // does need clearing here -- otherwise a flag gated to the outgoing
-    // account (e.g. helpButtonEnabled for Beatty LLC) keeps evaluating true
-    // on the login screen and for whichever user logs in next, until they
-    // refresh the page.
-    setFeatureContext(null);
   };
 
   return (

@@ -86,14 +86,19 @@
 }
 
 .help-btn {
-  background: transparent;
-  color: var(--sidebar-text);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: #1e9e5a;
+  color: #ffffff;
+  border: 1px solid #1e9e5a;
   border-radius: 6px;
   padding: 10px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.help-btn:hover {
+  background: #17824a;
+  border-color: #17824a;
 }
 
 .identity-card {

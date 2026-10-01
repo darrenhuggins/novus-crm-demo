@@ -85,6 +85,17 @@
   font-weight: 600;
 }
 
+.help-btn {
+  background: transparent;
+  color: var(--sidebar-text);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .identity-card {
   margin-top: 4px;
   padding: 10px 12px;

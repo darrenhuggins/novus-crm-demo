@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@openfeature/react-sdk": "^1.4.1",
+    "@openfeature/web-sdk": "^1.10.0",
+    "@pendo/openfeature-web-provider": "^0.2.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4"

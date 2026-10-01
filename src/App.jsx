@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { OpenFeatureProvider } from '@openfeature/react-sdk';
 import Sidebar from './components/Sidebar';
 import NovusWidget from './components/NovusWidget';
 import LoginGate from './components/LoginGate';
@@ -44,13 +45,15 @@ function AppContent() {
 
 function App() {
   return (
-    <CrmDataProvider>
-      <AuthProvider>
-        <ErrorBannerProvider>
-          <AppContent />
-        </ErrorBannerProvider>
-      </AuthProvider>
-    </CrmDataProvider>
+    <OpenFeatureProvider>
+      <CrmDataProvider>
+        <AuthProvider>
+          <ErrorBannerProvider>
+            <AppContent />
+          </ErrorBannerProvider>
+        </AuthProvider>
+      </CrmDataProvider>
+    </OpenFeatureProvider>
   );
 }
 

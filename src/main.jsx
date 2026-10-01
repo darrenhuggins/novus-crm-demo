@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { OpenFeature } from '@openfeature/web-sdk'
+import { PendoProvider } from '@pendo/openfeature-web-provider'
 import './index.css'
 import App from './App.jsx'
 
@@ -21,6 +23,8 @@ pendo.initialize({
     id: getOrCreateVisitorId(),
   },
 })
+
+OpenFeature.setProviderAndWait(new PendoProvider())
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

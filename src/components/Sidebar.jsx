@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import AddNewModal from './AddNewModal';
+import HelpButton from './HelpButton';
 import { useAuth } from '../context/AuthContext';
 
 /* global __APP_VERSION__ */
@@ -58,6 +59,7 @@ export default function Sidebar({ onOpenSimulator }) {
       <div className="sidebar-footer">
         <button className="add-new-btn" onClick={() => setModalOpen(true)}>+ Add New</button>
         <button className="simulate-btn" onClick={onOpenSimulator}>Simulate Activity</button>
+        <HelpButton />
 
         {user && (
           <div className="identity-card">
